@@ -34,6 +34,173 @@ class Command extends WP_CLI_Command {
 	}
 
 	/**
+	 * Generate a JSON file containing the PHPDoc markup, and save to filesystem.
+	 *
+	 * @synopsis <directory> [<output_file>]
+	 *
+	 * @param array $args
+	 */
+	public function sublime( $args ) {
+		$directory   = realpath( $args[0] );
+		$output_file = empty( $args[1] ) ? 'phpdoc.json' : $args[1];
+		// $json        = $this->_get_phpdoc_data( $directory );
+		$json        = $this->_sublime_get_phpdoc_data( $directory );
+		$result      = file_put_contents( $output_file, $json );
+		WP_CLI::line();
+
+		if ( false === $result ) {
+			WP_CLI::error( sprintf( 'Problem writing %1$s bytes of data to %2$s', strlen( $json ), $output_file ) );
+			exit;
+		}
+
+		WP_CLI::success( sprintf( 'Data exported to %1$s', $output_file ) );
+		WP_CLI::line();
+	}
+
+	/**
+	 * Generate the data from the PHPDoc markup.
+	 *
+	 * @param string $path   Directory or file to scan for PHPDoc
+	 * @param string $format What format the data is returned in: [json|array].
+	 *
+	 * @return string|array
+	 */
+	protected function _sublime_get_phpdoc_data( $path, $format = 'json' ) {
+		WP_CLI::line( sprintf( 'Extracting PHPDoc from %1$s. This may take a few minutes...', $path ) );
+		$is_file = is_file( $path );
+		$files   = $is_file ? array( $path ) : get_wp_files( $path );
+		$path    = $is_file ? dirname( $path ) : $path;
+
+		if ( $files instanceof \WP_Error ) {
+			WP_CLI::error( sprintf( 'Problem with %1$s: %2$s', $path, $files->get_error_message() ) );
+			exit;
+		}
+
+		// $output = parse_files( $files, $path );
+		$output = $this->sublime_parse_files( $files, $path );
+
+		if ( 'json' == $format ) {
+
+			$data = array(
+				"scope"       => "source.php - variable.other.php",
+				"comment"     => "Constants / Class's a-z",
+				"completions" => $output,
+			);
+
+			return json_encode( $data, JSON_PRETTY_PRINT );
+			// return json_encode( $output, JSON_PRETTY_PRINT );
+		}
+
+		return $output;
+	}
+
+	/**
+	 * @param array  $files
+	 * @param string $root
+	 *
+	 * @return array
+	 */
+	function sublime_parse_files( $files, $root ) {
+		$output = array();
+
+		foreach ( $files as $filename ) {
+			$file = new File_Reflector( $filename );
+
+			$path = ltrim( substr( $filename, strlen( $root ) ), DIRECTORY_SEPARATOR );
+			$file->setFilename( $path );
+
+			$file->process();
+
+			// // TODO proper exporter
+			// $out = array(
+			// 	'file' => export_docblock( $file ),
+			// 	'path' => str_replace( DIRECTORY_SEPARATOR, '/', $file->getFilename() ),
+			// 	'root' => $root,
+			// );
+
+			// if ( ! empty( $file->uses ) ) {
+			// 	$out['uses'] = export_uses( $file->uses );
+			// }
+
+			// foreach ( $file->getIncludes() as $include ) {
+			// 	$out['includes'][] = array(
+			// 		'name' => $include->getName(),
+			// 		'line' => $include->getLineNumber(),
+			// 		'type' => $include->getType(),
+			// 	);
+			// }
+
+			// 
+			// COSNTANTS
+			// $ wp parser sublime wp-admin all-constants.json
+			// $ wp parser sublime wp-admin "C:\Users\Yum\AppData\Roaming\Sublime Text 3\Packages\WordPress Code Reference\all-constants.json"
+			// $ wp parser sublime wp-admin "C:\Users\Yum\AppData\Roaming\Sublime Text 3\Packages\WordPress Code Reference\all-constants.sublime-completions"
+			foreach ( $file->getConstants() as $constant ) {
+				$output[] = array(
+					"trigger" => $constant->getShortName(),
+					// "contents" => define( 'TEST', 'TEST' );
+					// "contents" => define( 'TEST', 'TEST' );
+					"contents" => 'define( \''.$constant->getShortName().'\', ${1:'.$constant->getValue().'} );',
+				);
+				// $out['constants'][] = array(
+				// 	'name'  => $constant->getShortName(),
+				// 	'line'  => $constant->getLineNumber(),
+				// 	'value' => $constant->getValue(),
+				// );
+			}
+
+			// if ( ! empty( $file->uses['hooks'] ) ) {
+			// 	$out['hooks'] = export_hooks( $file->uses['hooks'] );
+			// }
+
+			// foreach ( $file->getFunctions() as $function ) {
+			// 	$func = array(
+			// 		'name'      => $function->getShortName(),
+			// 		'namespace' => $function->getNamespace(),
+			// 		'aliases'   => $function->getNamespaceAliases(),
+			// 		'line'      => $function->getLineNumber(),
+			// 		'end_line'  => $function->getNode()->getAttribute( 'endLine' ),
+			// 		'arguments' => export_arguments( $function->getArguments() ),
+			// 		'doc'       => export_docblock( $function ),
+			// 		'hooks'     => array(),
+			// 	);
+
+			// 	if ( ! empty( $function->uses ) ) {
+			// 		$func['uses'] = export_uses( $function->uses );
+
+			// 		if ( ! empty( $function->uses['hooks'] ) ) {
+			// 			$func['hooks'] = export_hooks( $function->uses['hooks'] );
+			// 		}
+			// 	}
+
+			// 	$out['functions'][] = $func;
+			// }
+
+			// foreach ( $file->getClasses() as $class ) {
+			// 	$class_data = array(
+			// 		'name'       => $class->getShortName(),
+			// 		'namespace'  => $class->getNamespace(),
+			// 		'line'       => $class->getLineNumber(),
+			// 		'end_line'   => $class->getNode()->getAttribute( 'endLine' ),
+			// 		'final'      => $class->isFinal(),
+			// 		'abstract'   => $class->isAbstract(),
+			// 		'extends'    => $class->getParentClass(),
+			// 		'implements' => $class->getInterfaces(),
+			// 		'properties' => export_properties( $class->getProperties() ),
+			// 		'methods'    => export_methods( $class->getMethods() ),
+			// 		'doc'        => export_docblock( $class ),
+			// 	);
+
+			// 	$out['classes'][] = $class_data;
+			// }
+
+			// $output[] = $out;
+		}
+
+		return $output;
+	}
+
+	/**
 	 * Read a JSON file containing the PHPDoc markup, convert it into WordPress posts, and insert into DB.
 	 *
 	 * @synopsis <file> [--quick] [--import-internal]
