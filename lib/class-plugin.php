@@ -14,7 +14,12 @@ class Plugin {
 	public function on_load() {
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			// \WP_CLI::add_command( 'parser', __NAMESPACE__ . '\\CommandActions' );
+			// \WP_CLI::add_command( 'parser', __NAMESPACE__ . '\\CommandActions' );
+			// \WP_CLI::add_command( 'parser', __NAMESPACE__ . '\\CommandActions' );
 			\WP_CLI::add_command( 'parser', __NAMESPACE__ . '\\Command' );
+			\WP_CLI::add_command( 'parser', __NAMESPACE__ . '\\CommandActions' );
+			// \WP_CLI::add_command( 'parser', __NAMESPACE__ . '\\CommandActionsSnippets' );
 		}
 
 		$this->relationships = new Relationships;
