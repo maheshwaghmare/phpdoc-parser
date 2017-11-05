@@ -26,7 +26,6 @@ class CommandActions extends WP_CLI_Command {
 		// $json        = $this->_get_phpdoc_data( $directory );
 		$json        = $this->_sublime_get_phpdoc_data( $type, $directory );
 		$result      = file_put_contents( $output_file, $json );
-		WP_CLI::line();
 
 		if ( false === $result ) {
 			WP_CLI::error( sprintf( 'Problem writing %1$s bytes of data to %2$s', strlen( $json ), $output_file ) );
