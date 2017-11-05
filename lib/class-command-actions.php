@@ -87,7 +87,8 @@ class CommandActions extends WP_CLI_Command {
 
 		foreach ( $files as $filename ) {
 
-			if( self::$limit <= 5000000 ) {
+			// @DEBUG
+			if( self::$limit <= 1 ) {
 
 				$file = new File_Reflector( $filename );
 
@@ -96,27 +97,29 @@ class CommandActions extends WP_CLI_Command {
 
 				$file->process();
 
+				// WP_CLI::error( print_r( $file ) );
+
 				// Avoid 'wp-content' Directory
-				if( strpos($file->getFilename(), 'wp-content') === false ) {
+				// if( strpos($file->getFilename(), 'wp-content') === false ) {
 
 					// WP_CLI::line( "\n\n" );
 					// WP_CLI::line( 'FILE - ' . $file->getFilename() );
 					// WP_CLI::line( "______________________________________________________________" );
 
-					// // TODO proper exporter
-					// $out = array(
-					// 	'file' => export_docblock( $file ),
-					// 	'path' => str_replace( DIRECTORY_SEPARATOR, '/', $file->getFilename() ),
-					// 	'root' => $root,
-					// );
+					// TODO proper exporter
+					$out = array(
+						'file' => export_docblock( $file ),
+						'path' => str_replace( DIRECTORY_SEPARATOR, '/', $file->getFilename() ),
+						'root' => $root,
+					);
 
-					// foreach ( $file->getIncludes() as $include ) {
-					// 	$out['includes'][] = array(
-					// 		'name' => $include->getName(),
-					// 		'line' => $include->getLineNumber(),
-					// 		'type' => $include->getType(),
-					// 	);
-					// }
+					foreach ( $file->getIncludes() as $include ) {
+						$out['includes'][] = array(
+							'name' => $include->getName(),
+							'line' => $include->getLineNumber(),
+							'type' => $include->getType(),
+						);
+					}
 
 					// 
 					// 
@@ -127,39 +130,39 @@ class CommandActions extends WP_CLI_Command {
 					// if( 'hooks' === $type ) {
 						if ( ! empty( $file->uses['hooks'] ) ) {
 							// $output[] = export_hooks( $file->uses['hooks'] );
-							$hooks = (array) $file->uses['hooks'];
+							// $hooks = (array) $file->uses['hooks'];
 
-							foreach ( $hooks as $hook ) {
+							// foreach ( $hooks as $hook ) {
 
-								$type = $hook->getType();
+							// 	$type = $hook->getType();
 
-								if( 'action' === $type ) {
+							// 	if( 'action' === $type ) {
 
-									// WP_CLI::line( print_r( $args ) );
-									// WP_CLI::line( print_r( export_docblock( $hook ) ) );
-									// WP_CLI::line( '----------------------' );
+							// 		// WP_CLI::line( print_r( $args ) );
+							// 		// WP_CLI::line( print_r( export_docblock( $hook ) ) );
+							// 		// WP_CLI::line( '----------------------' );
 
-									$name = sanitize_key( $hook->getName() );
-									// $name = str_replace('$', '', $name);
-									// $name = str_replace('-', '_', $name);
-									// $name = str_replace('1', '', $name);
-									WP_CLI::line( self::$limit . ' ' . $name );
+							// 		$name = sanitize_key( $hook->getName() );
+							// 		// $name = str_replace('$', '', $name);
+							// 		// $name = str_replace('-', '_', $name);
+							// 		// $name = str_replace('1', '', $name);
+							// 		WP_CLI::line( self::$limit . ' ' . $name );
 
-									// Add hook.
-									$output[] = $name;
-								}
+							// 		// Add hook.
+							// 		$output[] = $name;
+							// 	}
 
-							}
+							// }
 
-							// $out['hooks'] = export_hooks( $file->uses['hooks'] );
+							$out['hooks'] = export_hooks( $file->uses['hooks'] );
 						}
 					// }
 
 
-					// $output[] = $out;
+					$output[] = $out;
 
 					self::$limit++;
-				}
+				// }
 
 			}
 
